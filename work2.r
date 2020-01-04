@@ -23,7 +23,6 @@ makeDistinctRow_index <- function (
             # if the current col is the last col in targetcolnames.list, 
             # update the retainedindexcolvalue
             if (thecurcol == lastcolname) {
-
                 retainedindexcolvalue <<- theindexcolvalue 
             }           
             assign(tmpvectorname, c(thecolvalue), envir = .GlobalEnv)         
@@ -49,8 +48,8 @@ makeDistinctRow_index <- function (
 # thedf.df
 
 
-thedf.df <- drug.df
-head(thedf.df)
+thedf.df <- pharm.df
+head(pharm.df)
 # determine the indexcol
 indexcolname <- 'DRUG_CODE'
 
@@ -121,10 +120,18 @@ for (row in (1:nrow(thedf.df))) {
 } # end loop
 head(target.df)
 # View(target.df)
+nrow(vet.df)
+nrow(target.df)
 
+x <- target.df['DRUG_CODE']
+x2 <- unique(x)
+nrow(x2)
+View(x2)
 
-
-
+x3 <- pharm.df['DRUG_CODE']
+x4 <- unique(x3)
+nrow(pharm.df)
+nrow(x4)
 
 
 
