@@ -36,7 +36,6 @@ str2vector_my <- function (thestr, dlmt, noempty) {
 }
 
 # a tool to make a df with information of tables (table name, varname, and vartype)
-
 maketableinfo_df_my <- function (){
     # input the raw table info (i.e., input the table name, var name, and var type )
     rawtablestr_vector <- inputrawtableinfo_vector_my()
@@ -131,10 +130,11 @@ maketableinfo_df_my <- function (){
 } # end function make df of tables
 
 
+
 # get data of a specified data table in a zip file
 getDataOfATableInAZip_df <- function (thetablename, zipfileobj){
 
-    zipfileobj <- tmpzip
+    # zipfileobj <- tmpzip
     name_thetxt <- paste0(thetablename, ".txt")
     # unzip the text file
     data.list <- read.table(unz(zipfileobj, name_thetxt),  header=F, quote="\"", sep=",")
@@ -154,7 +154,8 @@ getDataOfATableInAZip_df <- function (thetablename, zipfileobj){
     colnames(data.list) <- thevars.vector
 
     # change data into a df
-    thedata.df <- data.frame(data.list)
+    # Note! turn off the string as factors setting does not work for datalist that has been created as stringasfactors=true
+    thedata.df <- data.frame(data.list, stringsAsFactors =FALSE)
     # reset row index
     rownames(thedata.df) <- NULL
     # head(thedata.df)
@@ -162,8 +163,21 @@ getDataOfATableInAZip_df <- function (thetablename, zipfileobj){
     return (thedata.df)
 } # end function
 
+# download and unzip thezipfiles without saving to local
+downloadzip <- function (zipname){
+    # zipname <- allfiles.zip 
+    #name_thezip <- "F:/Personal/Dropbox/Project/Canada DPD/SASProject/Data/allfiles.zip"
+    name_thezip <- paste0("https://www.canada.ca/content/dam/hc-sc/documents/services/drug-product-database/", zipname)
+    #https://rpubs.com/otienodominic/398952
+    #create a tmp file
+    tmpzip <- tempfile()
+    download.file(name_thezip, tmpzip)
+    return (tmpzip)
+}
 
-# covert the raw table info into a vector
+
+
+# covert the raw table vars info into a vector
 inputrawtableinfo_vector_my <- function (){
     x <- c(
     "ingred
@@ -282,11 +296,151 @@ inputrawtableinfo_vector_my <- function (){
     inactive
     DRUG_CODE NUMBER(8)
     DRUG_IDENTIFICATION_NUMBER VARCHAR2(29)
-    BRAND_NAME VARCHAR2(200)
+    BRAND_NAME_IA VARCHAR2(200)
     HISTORY_DATE DATE
     "
     )
 
     return (x)
 }
+
+
+# make a datafile from the raw data, each row contains a distinct drug_code
+# for the same drug_code, the other variables might have multpile values
+# These values are saved as a list in a row
+makeDataFile <- function(thedf.df, indexcolname) {
+    # thedf.df <- pharm.df
+    # head(pharm.df)
+
+    # determine the indexcol
+    # indexcolname <- 'DRUG_CODE'
+
+    # get the number of columns and names from the df
+    colnames.list <- colnames(thedf.df)
+    # colnames.list
+
+    # sort by id
+    thedf.df <- thedf.df[order(thedf.df[indexcolname]),]
+    # reset row numbers
+    rownames(thedf.df) <- NULL
+
+    #prepare the target df with the same colnames as in thedf.df
+    # add all distinct index col values
+
+    target.df <- data.frame(matrix(data=list(), ncol = ncol(thedf.df), nrow = 0))
+    colnames(target.df) <- colnames.list
+
+    # get all indexcol values
+    indexcolvalues.list <- thedf.df[indexcolname]
+    distinctindexcolvalues.list <- unlist(unique(indexcolvalues.list))
+    i <- 0
+    for (v in distinctindexcolvalues.list) {
+        i <- i + 1
+        target.df[i, indexcolname] = v
+    }
+
+    # for each row in the df, if the id is unchanged, push the value in atc into a vector
+    #create tmp vectors to hold values of a col in rows where the indexcolname value is the same
+    # create a tmp vector for each col in thedf, except the indexcol
+
+    # from the colname.list, exclude the indexcol
+    targetcolnames.list <- unlist(lapply(colnames.list, function(x){x[!x == indexcolname]}))
+    # targetcolnames.list = unlist(lapply(targetcolnames.list, function(x){x[!x == 'atc']}))
+    # get the last col 's value 
+    lastcolname <- targetcolnames.list[length(targetcolnames.list)] 
+
+    # for each col in targetcolname.list, create a tmp vector
+    for (x in targetcolnames.list){
+        # determine the tmpvectorname
+        tmpvectorname <- paste0('tmp_', x, '.vector') # like tmp_DIN.vector
+        # assign an empty vector to the tmpvectorname
+        assign(tmpvectorname, vector(), envir = .GlobalEnv )
+    }
+
+    #create a var to hold the value of the indexcol
+    retainedindexcolvalue <-''
+    i <- 0
+    for (row in (1:nrow(thedf.df))) {
+        i <- i + 1
+        # get the vlaue of the current index col
+        theindexcolvalue <- unlist(thedf.df[row,indexcolname])
+        # thecurcoln=1
+        # for a given var, get the distinct values of a col of thedf.df
+        for (thecurcol in targetcolnames.list) {
+            tmpvectorname <-  paste0('tmp_', thecurcol, '.vector') # like tmp_DIN.vector
+            # make rows of distinct indexcol values
+            # e.g., putting all drug_code=2 rows into 1 row. 
+            # multiple values in other columns are collapsed to a vector 
+            # makeDistinctRow_index (indexcolname,
+            #     thedf.df, row, thecurcol,
+            #     theindexcolvalue, lastcolname
+            #     )
+
+            # get the value of the current col
+                thecolvalue <- unlist(thedf.df[row,thecurcol])
+                # if the indexcol's value remains unchanged
+                if (retainedindexcolvalue == theindexcolvalue){
+                    # push the value of the current col into the tmp.vector
+                    if ( ! thecolvalue %in% get(tmpvectorname)){
+                    assign(tmpvectorname, c(get(tmpvectorname), thecolvalue), envir = .GlobalEnv )   
+                    }
+                } else {# if the indexcol's value has changed
+                        if (i > 1 ){
+                            target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
+                        }
+                        # update the retained value and the tmp.vector
+                        # if the current col is the last col in targetcolnames.list, 
+                        # update the retainedindexcolvalue
+                        if (thecurcol == lastcolname) {
+                            retainedindexcolvalue <- theindexcolvalue 
+                        }           
+                        assign(tmpvectorname, c(thecolvalue), envir = .GlobalEnv)         
+                }
+
+                #finally, if it is the last row, append the id and the values of the current col again
+                if (i == nrow(thedf.df)){
+                    target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
+                }
+        }
+    } # end loop
+
+    return (target.df)
+}
+
+
+# for each index value, get the distinct values of a col of thedf.df,  and save in a vector
+# note: global variables!
+makeDistinctRow_index <- function (
+        indexcolname,
+        thedf.df, row, thecurcol,
+        theindexcolvalue, lastcolname
+    ) {   
+    
+    # get the value of the current col
+    thecolvalue <- unlist(thedf.df[row,thecurcol])
+    # if the indexcol's value remains unchanged
+    if (retainedindexcolvalue == theindexcolvalue){
+        # push the value of the current col into the tmp.vector
+        if ( ! thecolvalue %in% get(tmpvectorname)){
+         assign(tmpvectorname, c(get(tmpvectorname), thecolvalue), envir = .GlobalEnv )   
+        }
+    } else {# if the indexcol's value has changed
+            if (i > 1 ){
+                target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
+            }
+            # update the retained value and the tmp.vector
+            # if the current col is the last col in targetcolnames.list, 
+            # update the retainedindexcolvalue
+            if (thecurcol == lastcolname) {
+                retainedindexcolvalue <- theindexcolvalue 
+            }           
+            assign(tmpvectorname, c(thecolvalue), envir = .GlobalEnv)         
+    }
+
+    #finally, if it is the last row, append the id and the values of the current col again
+    if (i == nrow(thedf.df)){
+        target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
+    }
+} # end function
+
 
