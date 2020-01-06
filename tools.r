@@ -175,6 +175,28 @@ downloadzip <- function (zipname){
     return (tmpzip)
 }
 
+# convert the source df into a JSON and save as a local txt file
+saveAsTxt_my <- function (datadfnamestr, targetfile) {
+
+    #Note: the jsonlite fromJSON automatically convert escape chars into utf-8 code. which may cause error...
+    tmp.df <- get(datadfnamestr)
+    #change all NULL to NA (NULL is inside a list, NA is blank). This is required before using the library jsonlite
+    #https://stackoverflow.com/questions/40379021/function-to-change-blanks-to-na
+    tmp.df[tmp.df == 'NULL'] <- NA
+
+    # df to JSON (package=jsonlite)
+    tmp.JSON <- toJSON(tmp.df, null='null')
+    # tmp.JSON
+
+    #write the json obj to a local file
+    # Wrong. write_json is incorrect. Do not use it.
+    #write_json(vet.JSON, 'test.json')
+    # the correct way is directly write as a txt file!
+    # write/save to a local file (as a text file)
+    fileConn<- file(targetfile)
+    writeLines(tmp.JSON, fileConn)
+    close(fileConn)
+}
 
 
 # covert the raw table vars info into a vector

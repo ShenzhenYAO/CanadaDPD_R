@@ -27,7 +27,7 @@ notrun_aboutToFromJSON_RSD_CSV <- function () {
     # Wrong. write_json is incorrect. Do not use it.
     #write_json(vet.JSON, 'test.json')
 
-    # read from JSON obj (package=jsonlite)
+    # df from JSON obj (package=jsonlite)
     testfromjsonobj.df <- fromJSON(testobj.JSON)
     View(testfromjsonobj.df)
     all.equal(testfromjsonobj.df, testsrc.df)
@@ -53,3 +53,57 @@ notrun_aboutToFromJSON_RSD_CSV <- function () {
     # all(testsrc.df == testfromrds)
 
 } # end not run
+
+
+notrun2 <- function () {
+
+#check out the way to convert to JSON and save as local files in learning.r
+#http://www.datasciencemadesimple.com/join-in-r-merge-in-r/
+tmp.df <- merge(ingred_distinct.df, comp_distinct.df, by= c(indexcolname), all=TRUE)
+
+# merge data frame, if the 'by' column is a single value (a vector of one element)
+a <- data.frame(id= c(1,2,3), v1=c(9,8,7))
+a
+b <- data.frame(id=c(1,4, 3), v2=c(99,55,77))
+z1 <- merge(a, b, by= c('id'), all=TRUE)
+z1
+z2 <- merge(a, b, by.x= c('id'), by.y= c('id'), all=TRUE)
+z2
+
+# merge data frame, if the 'by' column is a list( multiple values in a cell)
+c <- data.frame(matrix(data=list(), ncol = 2, nrow = 0))
+colnames(c) <- c('id', 'v3')
+c[[1,1]] <- 4
+c[[1,2]] <- 88
+c[[2,1]] <- 1
+c[[2,2]] <- list(y)
+str(c)
+d <- data.frame(matrix(data=list(), ncol = 2, nrow = 0))
+colnames(d) <- c('id', 'v3')
+d[[1,1]] <- 4
+d[[1,2]] <- 88
+d[[2,1]] <- 2
+d[[2,2]] <- list(y)
+str(d)
+# cannot merge the above two df, as the 'by' column id is a list
+zz1 <- merge(c, d, by= c('id'), all=TRUE)
+zz1
+# the following also not work
+zz2 <- merge(c, d, by.x=c(c$id), by.y=c(d$id), all=TRUE)
+zz2
+
+# to merge the above two df, the 'by' column 'id' need to be reduced to a single value (i.e., a vector with one value)
+e <- c
+# Note: in e['id'], each element in the column 'id' is treated as a vector of a single value
+# in e$id, each element in the column 'id' is treated as a list of multiple values
+# the following is to reduce e$id (lists) into e['id'] (single value vectors)
+e['id'] <- unlist(e$id)
+str(e)
+f <- d
+f['id'] <- unlist(f$id)
+str(f)
+# zzz <- merge(e, f, by= c('id'), all=TRUE)
+zzz <- merge(e, f, by.x= c('id'), by.y= c('id'), all=TRUE)
+zzz
+
+} # not run2
