@@ -1,5 +1,8 @@
 # to define table name and vars
 definetable_list_my <- function (name_str, vars_str, dlmt) {
+
+    print('start definetable_list_my ===============================')
+
    #by default, let dlmt=' '
     if (missing(dlmt)) {
         dlmt=' '
@@ -16,6 +19,9 @@ definetable_list_my <- function (name_str, vars_str, dlmt) {
 
 # a function to convert a string into a vector, ignoring empty elements if not specified to keep empty elements
 str2vector_my <- function (thestr, dlmt, noempty) {
+
+    print('start str2vector_my ===============================')
+
     # by default, dlmt is blank space, or line breaker
     if (missing(dlmt)) { dlmt <- "[ \n]+" }
     # by default, ignore empty elements
@@ -36,13 +42,17 @@ str2vector_my <- function (thestr, dlmt, noempty) {
 }
 
 # a tool to make a df with information of tables (table name, varname, and vartype)
-maketableinfo_df_my <- function (){
+maketableinfo_dpd_my <- function (){
+
+    print('start maketableinfo_dpd_my ===============================')
+
     # input the raw table info (i.e., input the table name, var name, and var type )
     rawtablestr_vector <- inputrawtableinfo_vector_my()
 
     #create an empty vector
     tables_vector <- vector()
-    #loop for each element in the vector 'rawtablestr_vector', convert the element (a string containing raw table info) into a vector
+    #loop for each element in the vector 'rawtablestr_vector', 
+    # convert the element (a string containing raw table info) into a vector
     for (x in rawtablestr_vector) {
         therawtableEles_vector <- str2vector_my(x)
         # the eles in therawtableEles_vector include the table name, followed by (varname1, vartype1), (varname2, vartype2)... repeatedly
@@ -94,7 +104,7 @@ maketableinfo_df_my <- function (){
 
     # convert the tables_vector back to a vector
     tables_vector <- (tables_list$tables)
-    tables_vector
+    # tables_vector
 
     # loop for each table in tables_vector
     i <-0
@@ -130,12 +140,76 @@ maketableinfo_df_my <- function (){
 } # end function make df of tables
 
 
+#unzip all tables, merge as a big zip, and save as a json
+zip2dfjson_dpd_my <- function( name_thezip, dpd.list, indexcolname) {
+
+    print('start zip2dfjson_dpd_my ===============================')
+
+    #make a surfix like '_', or '_ap', etc.
+    thezipsurfix <- sub('\\.zip$', '', name_thezip)
+    thezipsurfix <- sub('allfiles', '', thezipsurfix)
+
+    # download the zip file
+    tmpzip <- downloadzip(name_thezip)
+
+    # make a dataframe with tablename, varname, and vartype of all tables 
+    tables.df <- maketableinfo_dpd_my()
+
+    # get unique table names
+    # get a vector of all values in the column 'table' as a vector
+    tablenames.vector <- tables.df[,'table']
+    # from above, get the unique values
+    uniquetablenames.vector = unique(tablenames.vector)
+
+    # drop the tablename 'inactive' if the data zip is not for inactive drugs
+    if (name_thezip != 'allfiles_ia.zip') {
+        uniquetablenames.list <-lapply(uniquetablenames.vector, function(x){x[!x == "inactive"]})
+        #Note: lapply() results in a list, need to convert it back to a vector
+        uniquetablenames.vector = unlist(uniquetablenames.list)
+        # uniquetablenames.vector
+    }
+
+    filecount <- 0
+    # loop for each table name, import data into dfs named by the tablename (e.g.,thedata_drug.df )
+    for (thetablename in uniquetablenames.vector) {
+        # print(thetablename)
+        filecount= filecount + 1
+        #unzip the table, convert to a df, and merge it into a big df
+        mergedtmp.df <- addfile2df_dpd_my(
+                            tables.df,
+                            thetablename,
+                            thezipsurfix,
+                            tmpzip,
+                            indexcolname,
+                            filecount,
+                            mergedtmp.df
+                        )
+    } #end for
+
+    # after all files are merged, make a list with the zipfile name, and the mergedtmp.df
+    tmp.df <- list(zipname = name_thezip, data = mergedtmp.df)
+    dpd.list <- rbind(dpd.list, tmp.df)
+
+    # View(dpd.list)
+    saveAsTxt_my(dpd.list, 'data/dpd.json')
+
+    return (dpd.list)
+
+} # end founction
 
 # get data of a specified data table in a zip file
-getDataOfATableInAZip_df <- function (thetablename, zipfileobj){
-
+getDataOfATableInAZip_df <- function (tables.df, thetablename, thezipsurfix, zipfileobj){
+    print('start getDataOfATableInAZip_df ===============================')
     # zipfileobj <- tmpzip
-    name_thetxt <- paste0(thetablename, ".txt")
+    thetablename_surfix <- paste0(thetablename, thezipsurfix)
+    # there is an exception:
+    # in allfiles_ia.zip, the file inactive.txt does not have a surfix _ia
+    if (thetablename == 'inactive') {
+        name_thetxt <- paste0(thetablename, ".txt")
+    } else {
+        name_thetxt <- paste0(thetablename_surfix, ".txt")
+    }
+    
     # unzip the text file
     data.list <- read.table(unz(zipfileobj, name_thetxt),  header=F, quote="\"", sep=",")
 
@@ -165,6 +239,9 @@ getDataOfATableInAZip_df <- function (thetablename, zipfileobj){
 
 # download and unzip thezipfiles without saving to local
 downloadzip <- function (zipname){
+    
+    print('start downloadzip ===============================')
+
     # zipname <- allfiles.zip 
     #name_thezip <- "F:/Personal/Dropbox/Project/Canada DPD/SASProject/Data/allfiles.zip"
     name_thezip <- paste0("https://www.canada.ca/content/dam/hc-sc/documents/services/drug-product-database/", zipname)
@@ -176,10 +253,12 @@ downloadzip <- function (zipname){
 }
 
 # convert the source df into a JSON and save as a local txt file
-saveAsTxt_my <- function (datadfnamestr, targetfile) {
+saveAsTxt_my <- function (srcdataobj, targetfilenamestr) {
+
+    print('start saveAsTxt_my ===============================')
 
     #Note: the jsonlite fromJSON automatically convert escape chars into utf-8 code. which may cause error...
-    tmp.df <- get(datadfnamestr)
+    tmp.df <- srcdataobj
     #change all NULL to NA (NULL is inside a list, NA is blank). This is required before using the library jsonlite
     #https://stackoverflow.com/questions/40379021/function-to-change-blanks-to-na
     tmp.df[tmp.df == 'NULL'] <- NA
@@ -193,9 +272,113 @@ saveAsTxt_my <- function (datadfnamestr, targetfile) {
     #write_json(vet.JSON, 'test.json')
     # the correct way is directly write as a txt file!
     # write/save to a local file (as a text file)
-    fileConn<- file(targetfile)
+    fileConn<- file(targetfilenamestr)
     writeLines(tmp.JSON, fileConn)
     close(fileConn)
+}
+
+
+#unzip the table, convert to a df, and merge it into a big df
+addfile2df_dpd_my <- function(
+        tables.df,
+        thetablename,
+        thezipsurfix,
+        tmpzip,
+        indexcolname,
+        filecount,
+        mergedtmp.df
+    ) {
+
+    print('start addfile2df_dpd_my ===============================')
+
+    if (missing(filecount)) {filecount <- 1 }
+    
+    thetablename_surfix <- paste0(thetablename, thezipsurfix)
+    # thetablename_surfix    
+    
+    #determine the name of the df
+    datadfnamestr=paste0(thetablename_surfix, '.df')
+    # get the data and same into the df named by the string 'datadfnamestr'
+    # note: not to save the df to 'datadfnamestr', but to save the df to a df named by the str value of 'datadfnamestr'
+    # e.g., datadfnamestr <- 'thedata_drug.df', the assign() saves the data to thedata_drug.df
+    assign(datadfnamestr, getDataOfATableInAZip_df(tables.df, thetablename, thezipsurfix, tmpzip))
+    # display the head rows of the df thedata_drug.df
+    # head(get(datadfnamestr))
+
+    # get the # rows of the df
+    nrows<- nrow(get(datadfnamestr))
+    print(paste0('the data frame ',datadfnamestr, ' contains ', nrows, ' rows'))
+
+    # check if the current table is unique by drug code
+    # make a datafile from the raw data, each row contains a distinct drug_code
+    # for the same drug_code, the other variables might have multpile values
+    # These values are saved as a list in a row
+    thetmpdf <- makeDataFile(get(datadfnamestr), indexcolname)
+    # reduce the DRUG_CODE column from a list to a vector of a single value 
+    # the column DRUG_CODE will be used as the key column to join data frames.
+    # such key columns cannot have nested lists.
+    # The following shows how to reduce the column to a single-value vector when using dynamic df names
+    # need to save the df (named by a parameter 'distinctdfstr') to a tmp df with a fixed name ('thetmpdf')
+
+    # unlist the column (indexcolname, e.g. 'DRUG_CODE')
+    # In the following line, cannot use get(distinctdfstr) on the left to represent the df 'vet_distinct.df' directly)
+    # e.g., it does not work: get(distinctdfstr) <- unlist(thetmpdf[[indexcolname]])
+    thetmpdf[indexcolname] <- unlist(thetmpdf[[indexcolname]])
+    # save the tmp df  to the df named by the parameter
+    distinctdfstr <- paste0(thetablename_surfix, '_distinct.df')
+    assign(distinctdfstr, thetmpdf)        
+    nrows_distinctdf <- nrow(thetmpdf)
+    print(paste0('the data frame ',distinctdfstr, ' contains ', nrows_distinctdf, ' rows'))
+
+    # convert the distinct df file into a JSON, and save to local as a txt file
+    targetfile <- paste0(distinctdfstr, '.json')
+    #targetfile
+
+    saveAsTxt_my(get(distinctdfstr), paste0('data/', targetfile))
+
+    # next is to connect the dataframes by DRUG_CODE
+    if (filecount == 1){
+        mergedtmp.df <- get(distinctdfstr)
+    } else {
+        # merge the current df with target.df by the indexcol 'DRUG_CODE'
+        mergedtmp.df <- merge(mergedtmp.df, get(distinctdfstr), 
+        by.x= c(indexcolname), by.y=c(indexcolname), all=TRUE)
+    }
+
+    zipjsonnamestr <- paste0('data/allfiles', thezipsurfix, '.json')
+    # save the merged table as a json like 'allfiles_ap.json'    
+    saveAsTxt_my(mergedtmp.df, zipjsonnamestr)
+
+    return (mergedtmp.df)
+
+} # end function 
+
+
+# read the dpd.json into a list with 4 dfs
+json2dfs_dpd_my <- function () {
+
+    dpdfromjsonfile.list <- fromJSON("data/dpd.json" )
+    # loop to have dfs from drugs of diferent status (in market, under application, dormant, or inactive)
+    jj=0
+    for (x in dpdfromjsonfile.list ){
+        jj = jj+1 # jj to control whether to view a particular df, or all the four
+            if (jj < 0 ){
+                # # get the name of the zipfile
+                name_srczip <- x[[1]]
+                print(name_srczip)
+                # remove the extension 'zip'
+                name_currentdf <- sub('\\.zip$', '', name_srczip)
+                # print(name_currentdf)
+                themeregeddfname = paste0(name_currentdf, '.df')
+                print(themeregeddfname)
+                assign(themeregeddfname,  x[-c(1) ])
+                # # not to view the name of the df, you dumb dumb!
+                # View(themeregeddfname)
+                # view the df named by the str.
+                View(get(themeregeddfname))  
+            }
+    }
+    return (dpdfromjsonfile.list)
 }
 
 
@@ -319,18 +502,18 @@ inputrawtableinfo_vector_my <- function (){
     DRUG_CODE NUMBER(8)
     DRUG_IDENTIFICATION_NUMBER VARCHAR2(29)
     BRAND_NAME_IA VARCHAR2(200)
-    HISTORY_DATE DATE
+    HISTORY_DATE_IA DATE
     "
     )
 
     return (x)
 }
 
-
 # make a datafile from the raw data, each row contains a distinct drug_code
 # for the same drug_code, the other variables might have multpile values
 # These values are saved as a list in a row
 makeDataFile <- function(thedf.df, indexcolname) {
+    print('start makeDataFile ===============================')
     # thedf.df <- pharm.df
     # head(pharm.df)
 
@@ -376,7 +559,7 @@ makeDataFile <- function(thedf.df, indexcolname) {
         # determine the tmpvectorname
         tmpvectorname <- paste0('tmp_', x, '.vector') # like tmp_DIN.vector
         # assign an empty vector to the tmpvectorname
-        assign(tmpvectorname, vector(), envir = .GlobalEnv )
+        assign(tmpvectorname, vector() )
     }
 
     #create a var to hold the value of the indexcol
@@ -393,10 +576,6 @@ makeDataFile <- function(thedf.df, indexcolname) {
             # make rows of distinct indexcol values
             # e.g., putting all drug_code=2 rows into 1 row. 
             # multiple values in other columns are collapsed to a vector 
-            # makeDistinctRow_index (indexcolname,
-            #     thedf.df, row, thecurcol,
-            #     theindexcolvalue, lastcolname
-            #     )
 
             # get the value of the current col
                 thecolvalue <- unlist(thedf.df[row,thecurcol])
@@ -404,7 +583,7 @@ makeDataFile <- function(thedf.df, indexcolname) {
                 if (retainedindexcolvalue == theindexcolvalue){
                     # push the value of the current col into the tmp.vector
                     if ( ! thecolvalue %in% get(tmpvectorname)){
-                    assign(tmpvectorname, c(get(tmpvectorname), thecolvalue), envir = .GlobalEnv )   
+                    assign(tmpvectorname, c(get(tmpvectorname), thecolvalue) )   
                     }
                 } else {# if the indexcol's value has changed
                         if (i > 1 ){
@@ -416,7 +595,7 @@ makeDataFile <- function(thedf.df, indexcolname) {
                         if (thecurcol == lastcolname) {
                             retainedindexcolvalue <- theindexcolvalue 
                         }           
-                        assign(tmpvectorname, c(thecolvalue), envir = .GlobalEnv)         
+                        assign(tmpvectorname, c(thecolvalue))         
                 }
 
                 #finally, if it is the last row, append the id and the values of the current col again
@@ -430,39 +609,6 @@ makeDataFile <- function(thedf.df, indexcolname) {
 }
 
 
-# for each index value, get the distinct values of a col of thedf.df,  and save in a vector
-# note: global variables!
-makeDistinctRow_index <- function (
-        indexcolname,
-        thedf.df, row, thecurcol,
-        theindexcolvalue, lastcolname
-    ) {   
-    
-    # get the value of the current col
-    thecolvalue <- unlist(thedf.df[row,thecurcol])
-    # if the indexcol's value remains unchanged
-    if (retainedindexcolvalue == theindexcolvalue){
-        # push the value of the current col into the tmp.vector
-        if ( ! thecolvalue %in% get(tmpvectorname)){
-         assign(tmpvectorname, c(get(tmpvectorname), thecolvalue), envir = .GlobalEnv )   
-        }
-    } else {# if the indexcol's value has changed
-            if (i > 1 ){
-                target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
-            }
-            # update the retained value and the tmp.vector
-            # if the current col is the last col in targetcolnames.list, 
-            # update the retainedindexcolvalue
-            if (thecurcol == lastcolname) {
-                retainedindexcolvalue <- theindexcolvalue 
-            }           
-            assign(tmpvectorname, c(thecolvalue), envir = .GlobalEnv)         
-    }
 
-    #finally, if it is the last row, append the id and the values of the current col again
-    if (i == nrow(thedf.df)){
-        target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
-    }
-} # end function
 
 
