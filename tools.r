@@ -187,8 +187,8 @@ zip2dfjson_dpd_my <- function( name_thezip, dpd.list, indexcolname) {
     } #end for
 
     # after all files are merged, make a list with the zipfile name, and the mergedtmp.df
-    tmp.df <- list(zipname = name_thezip, data = mergedtmp.df)
-    dpd.list <- rbind(dpd.list, tmp.df)
+    tmp.list <- list(zipname = name_thezip, data = mergedtmp.df)
+    dpd.list <- rbind(dpd.list, tmp.list)
 
     # View(dpd.list)
     saveAsTxt_my(dpd.list, 'data/dpd.json')
