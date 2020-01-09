@@ -1,7 +1,10 @@
+    # based on R 3.6.1
+
     #remove all objects from the memory
     #example: 
     rm(list=ls())
 
+    # Prevent the default behavior of R that, in dataframe, converting charactor values into factors
     options(stringsAsFactors = FALSE)
 
     # loading self-developped r functions
@@ -10,7 +13,7 @@
     # load a package to deal with JSON objects 
     # do not use the package 'rjson'. It cannot handle df with nested lists
     library('jsonlite')
-    # load a package to save and extract files re
+    # load a package to save and extract files from zips
     # install.packages('zip')
     library('zip')
 
@@ -28,7 +31,6 @@
 
     # define the names of the zip files
     zipnames <- c('allfiles.zip', 'allfiles_ap.zip', 'allfiles_dr.zip','allfiles_ia.zip')
-    zipnames <- c('allfiles_ia.zip')
     
     # loop for the four zipfiles, get files, and save as 'data/dpdjson.zip'    
     for (thezipname in zipnames) {

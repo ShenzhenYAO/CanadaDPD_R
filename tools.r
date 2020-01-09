@@ -361,8 +361,8 @@ json2dfs_dpd_my <- function () {
     # loop to have dfs from drugs of diferent status (in market, under application, dormant, or inactive)
     jj=0
     for (x in dpdfromjsonfile.list ){
-        jj = jj+1 # jj to control whether to view a particular df, or all the four
-            if (jj < 0 ){
+        jj = jj+1 # jj to control whether to view a particular df, or all the four dfs
+            if (jj > 0 ){
                 # # get the name of the zipfile
                 name_srczip <- x[[1]]
                 print(name_srczip)
