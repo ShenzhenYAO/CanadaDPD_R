@@ -4,7 +4,7 @@
     #example: 
     rm(list=ls())
 
-    # Prevent the default behavior of R that, in dataframe, converting charactor values into factors
+    # Prevent the default behavior of R that, in dataframe, converting character values into factors
     options(stringsAsFactors = FALSE)
 
     # loading self-developped r functions

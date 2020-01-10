@@ -54,13 +54,14 @@ maketableinfo_dpd_my <- function (){
     #loop for each element in the vector 'rawtablestr_vector', 
     # convert the element (a string containing raw table info) into a vector
     for (x in rawtablestr_vector) {
+        # convert the string (table name and vars) into a vector
         therawtableEles_vector <- str2vector_my(x)
         # the eles in therawtableEles_vector include the table name, followed by (varname1, vartype1), (varname2, vartype2)... repeatedly
         #get the table name
         thetablename <- therawtableEles_vector[1]
         #put the rest elements into a separate vector by removing the first element
         varnametypes_vector <- therawtableEles_vector[-1]
-        #covert the varnametypes_vector into a matrix of 2 columns (varname, vartype)
+        #convert the varnametypes_vector into a matrix of 2 columns (varname, vartype)
         varnametypes_matrix <- matrix(varnametypes_vector, ncol=2, byrow=TRUE)
         # add col names
         colnames(varnametypes_matrix) <- c("varname", 'vartype')
@@ -86,32 +87,37 @@ maketableinfo_dpd_my <- function (){
         # thetable_list <- fromJSON(thetable_JSON)
     }# end of loop
 
-    # convert the tables_vector to a list with one field, 'tables'
-    tables_list <- list (
-        tables = tables_vector
-    )
 
-    # covert the tables_list to a JSON
-    tables_JSON <- toJSON(tables_list)
+    #################################################################
+    # the following 3 steps are for practice
+    
+    # # convert the tables_vector to a list with one field, 'tables'
+    # tables_list <- list (
+    #     tables = tables_vector
+    # )
 
-    # write/save to a local file (as a text file)
-    # fileConn<-file("tables.json")
-    # writeLines(tables_JSON, fileConn)
-    # close(fileConn)
+    # # covert the tables_list to a JSON
+    # tables_JSON <- toJSON(tables_list)
 
-    # convert theJSON back to a list
-    tables_list <- fromJSON(tables_JSON)
+    # # write/save to a local file (as a text file)
+    # # fileConn<-file("tables.json")
+    # # writeLines(tables_JSON, fileConn)
+    # # close(fileConn)
 
-    # convert the tables_vector back to a vector
-    tables_vector <- (tables_list$tables)
-    # tables_vector
+    # # convert theJSON back to a list
+    # tables_list <- fromJSON(tables_JSON)
+
+    # # convert the tables_vector back to a vector
+    # tables_vector <- (tables_list$tables)
+    # # tables_vector
+    ##################################################################
 
     # loop for each table in tables_vector
     i <-0
     # create a blank dataframe
     tables_df <- data.frame(matrix(ncol = 3, nrow = 0))
     colnames(tables_df) <- c('table', 'varname', 'vartype')
-    tables_df 
+    # tables_df 
     for (x in tables_vector) {
         i=i+1
         # get the table name
@@ -291,6 +297,7 @@ addfile2df_dpd_my <- function(
 
     print('start addfile2df_dpd_my ===============================')
 
+    # by default,let file count =1
     if (missing(filecount)) {filecount <- 1 }
     
     thetablename_surfix <- paste0(thetablename, thezipsurfix)
@@ -298,7 +305,7 @@ addfile2df_dpd_my <- function(
     
     #determine the name of the df
     datadfnamestr=paste0(thetablename_surfix, '.df')
-    # get the data and same into the df named by the string 'datadfnamestr'
+    # get the data and name into the df named by the string 'datadfnamestr'
     # note: not to save the df to 'datadfnamestr', but to save the df to a df named by the str value of 'datadfnamestr'
     # e.g., datadfnamestr <- 'thedata_drug.df', the assign() saves the data to thedata_drug.df
     assign(datadfnamestr, getDataOfATableInAZip_df(tables.df, thetablename, thezipsurfix, tmpzip))
@@ -336,7 +343,7 @@ addfile2df_dpd_my <- function(
 
     saveAsTxt_my(get(distinctdfstr), paste0('data/', targetfile))
 
-    # next is to connect the dataframes by DRUG_CODE
+    # next is to merge the dataframes by DRUG_CODE
     if (filecount == 1){
         mergedtmp.df <- get(distinctdfstr)
     } else {
@@ -356,7 +363,7 @@ addfile2df_dpd_my <- function(
 
 # read the dpd.json into a list with 4 dfs
 json2dfs_dpd_my <- function () {
-
+    # get the dpd list from the local file dpd.json
     dpdfromjsonfile.list <- fromJSON("data/dpd.json" )
     # loop to have dfs from drugs of diferent status (in market, under application, dormant, or inactive)
     jj=0
@@ -529,9 +536,8 @@ makeDataFile <- function(thedf.df, indexcolname) {
     # reset row numbers
     rownames(thedf.df) <- NULL
 
-    #prepare the target df with the same colnames as in thedf.df
+    #prepare the target df (an empty df) with the same colnames as in thedf.df
     # add all distinct index col values
-
     target.df <- data.frame(matrix(data=list(), ncol = ncol(thedf.df), nrow = 0))
     colnames(target.df) <- colnames.list
 
@@ -549,13 +555,13 @@ makeDataFile <- function(thedf.df, indexcolname) {
     # create a tmp vector for each col in thedf, except the indexcol
 
     # from the colname.list, exclude the indexcol
-    targetcolnames.list <- unlist(lapply(colnames.list, function(x){x[!x == indexcolname]}))
-    # targetcolnames.list = unlist(lapply(targetcolnames.list, function(x){x[!x == 'atc']}))
+    targetcolnames.vector<- unlist(lapply(colnames.list, function(x){x[!x == indexcolname]}))
+    # targetcolnames.vector = unlist(lapply(targetcolnames.vector, function(x){x[!x == 'atc']}))
     # get the last col 's value 
-    lastcolname <- targetcolnames.list[length(targetcolnames.list)] 
+    lastcolname <- targetcolnames.vector[length(targetcolnames.vector)] 
 
-    # for each col in targetcolname.list, create a tmp vector
-    for (x in targetcolnames.list){
+    # for each col in targetcolnames.vector, create a tmp vector
+    for (x in targetcolnames.vector){
         # determine the tmpvectorname
         tmpvectorname <- paste0('tmp_', x, '.vector') # like tmp_DIN.vector
         # assign an empty vector to the tmpvectorname
@@ -571,37 +577,39 @@ makeDataFile <- function(thedf.df, indexcolname) {
         theindexcolvalue <- unlist(thedf.df[row,indexcolname])
         # thecurcoln=1
         # for a given var, get the distinct values of a col of thedf.df
-        for (thecurcol in targetcolnames.list) {
+        for (thecurcol in targetcolnames.vector) {
+
+            #make a tmp vector to hold distinct values in the current col
             tmpvectorname <-  paste0('tmp_', thecurcol, '.vector') # like tmp_DIN.vector
             # make rows of distinct indexcol values
             # e.g., putting all drug_code=2 rows into 1 row. 
             # multiple values in other columns are collapsed to a vector 
 
             # get the value of the current col
-                thecolvalue <- unlist(thedf.df[row,thecurcol])
-                # if the indexcol's value remains unchanged
-                if (retainedindexcolvalue == theindexcolvalue){
-                    # push the value of the current col into the tmp.vector
-                    if ( ! thecolvalue %in% get(tmpvectorname)){
-                    assign(tmpvectorname, c(get(tmpvectorname), thecolvalue) )   
+            thecolvalue <- unlist(thedf.df[row,thecurcol])
+            # if the indexcol's value remains unchanged
+            if (retainedindexcolvalue == theindexcolvalue){
+                # push the value of the current col into the tmp.vector
+                if ( ! thecolvalue %in% get(tmpvectorname)){
+                assign(tmpvectorname, c(get(tmpvectorname), thecolvalue) )   
+                }
+            } else {# if the indexcol's value has changed
+                    if (i > 1 ){
+                        target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
                     }
-                } else {# if the indexcol's value has changed
-                        if (i > 1 ){
-                            target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
-                        }
-                        # update the retained value and the tmp.vector
-                        # if the current col is the last col in targetcolnames.list, 
-                        # update the retainedindexcolvalue
-                        if (thecurcol == lastcolname) {
-                            retainedindexcolvalue <- theindexcolvalue 
-                        }           
-                        assign(tmpvectorname, c(thecolvalue))         
-                }
+                    # update the retained value and the tmp.vector
+                    # if the current col is the last col in targetcolnames.vector, 
+                    # update the retainedindexcolvalue
+                    if (thecurcol == lastcolname) {
+                        retainedindexcolvalue <- theindexcolvalue 
+                    }           
+                    assign(tmpvectorname, c(thecolvalue))         
+            }
 
-                #finally, if it is the last row, append the id and the values of the current col again
-                if (i == nrow(thedf.df)){
-                    target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
-                }
+            #finally, if it is the last row, append the id and the values of the current col again
+            if (i == nrow(thedf.df)){
+                target.df[[target.df[indexcolname] == retainedindexcolvalue, thecurcol]] <- get(tmpvectorname)
+            }
         }
     } # end loop
 
