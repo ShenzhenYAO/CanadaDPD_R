@@ -300,6 +300,7 @@ addfile2df_dpd_my <- function(
     # by default,let file count =1
     if (missing(filecount)) {filecount <- 1 }
     
+    # determine name of the df according to the file name 
     thetablename_surfix <- paste0(thetablename, thezipsurfix)
     # thetablename_surfix    
     
@@ -390,6 +391,7 @@ json2dfs_dpd_my <- function () {
 
 
 # covert the raw table vars info into a vector
+# Note: rename the columns of DIN, brand name, history date, so that they won't be duplciated with the same columns in other files
 inputrawtableinfo_vector_my <- function (){
     x <- c(
     "ingred
@@ -507,7 +509,7 @@ inputrawtableinfo_vector_my <- function (){
     "
     inactive
     DRUG_CODE NUMBER(8)
-    DRUG_IDENTIFICATION_NUMBER VARCHAR2(29)
+    DRUG_IDENTIFICATION_NUMBER_IA VARCHAR2(29)
     BRAND_NAME_IA VARCHAR2(200)
     HISTORY_DATE_IA DATE
     "
